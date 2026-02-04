@@ -2390,7 +2390,7 @@ class NotificationService:
         # 移除空块
         return [c for c in (c.strip() for c in chunks) if c]
 
-    def generate_sign(secret):
+    def generate_sign(self, secret):
         """
         生成钉钉机器人签名
         

@@ -105,7 +105,7 @@ class Config:
     astrbot_url: Optional[str] = None
 
     # 单股推送模式：每分析完一只股票立即推送，而不是汇总后推送
-    single_stock_notify: bool = False
+    single_stock_notify: bool = True
 
     # 报告类型：simple(精简) 或 full(完整)
     report_type: str = "simple"
