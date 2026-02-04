@@ -14,14 +14,16 @@ A股自选股智能分析系统 - 通知层
    - 邮件 SMTP
    - Pushover（手机/桌面推送）
 """
+import base64
 import hashlib
 import hmac
 import logging
 import json
+import os
 import smtplib
 import re
 import markdown2
-from datetime import datetime
+from datetime import datetime, time
 from typing import List, Dict, Any, Optional
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -29,6 +31,7 @@ from email.header import Header
 from enum import Enum
 
 import requests
+import urllib
 try:
     import discord
     discord_available = True
@@ -2387,7 +2390,81 @@ class NotificationService:
         # 移除空块
         return [c for c in (c.strip() for c in chunks) if c]
 
-    def _send_dingtalk_chunked(self, url: str, content: str, max_bytes: int = 20000) -> bool:
+    def generate_sign(secret):
+        """
+        生成钉钉机器人签名
+        
+        Args:
+            secret: 加签密钥
+            
+        Returns:
+            tuple: (timestamp, sign)
+        """
+        timestamp = str(round(time.time() * 1000))
+        secret_enc = secret.encode('utf-8')
+        string_to_sign = f'{timestamp}\n{secret}'
+        string_to_sign_enc = string_to_sign.encode('utf-8')
+        hmac_code = hmac.new(secret_enc, string_to_sign_enc, digestmod=hashlib.sha256).digest()
+        sign = urllib.parse.quote_plus(base64.b64encode(hmac_code))
+        return timestamp, sign
+
+
+    def _send_dingtalk_chunked(self, url: str, content: str, max_bytes: int = 20000):
+
+        """
+        发送钉钉告警消息
+        webhook_url, secret, message, title="LOF基金告警", fund_code=None
+        
+        Args:
+            webhook_url: 钉钉机器人Webhook URL
+            secret: 加签密钥（可选）
+            message: 告警消息内容
+            title: 消息标题
+            fund_code: 基金代码（用于去重）
+            
+        Returns:
+            bool: 是否发送成功
+        """
+        if not url:
+            print("钉钉Webhook URL未配置，跳过发送")
+            return False
+        dingtalk_webhook = os.environ.get("DINGTALK_WEBHOOK_URL", "")
+        dingtalk_secret = os.environ.get("DINGTALK_SECRET", "")
+        
+        try:
+            # 构造请求URL
+            if dingtalk_secret:
+                timestamp, sign = self.generate_sign(dingtalk_secret)
+                url = f"{url}&timestamp={timestamp}&sign={sign}"
+            else:
+                url = url
+            
+            # 构造Markdown消息
+            data = {
+                "msgtype": "markdown",
+                "markdown": {
+                    "title": "股票分析报告",
+                    "text": content
+                }
+            }
+            
+            headers = {'Content-Type': 'application/json'}
+            response = requests.post(url, headers=headers, data=json.dumps(data), timeout=10)
+            
+            result = response.json()
+            if result.get('errcode') == 0:
+                print("钉钉消息发送成功")
+                return True
+            else:
+                print(f"钉钉消息发送失败: {result}")
+                return False
+                
+        except Exception as e:
+            print(f"发送钉钉消息异常: {e}")
+            return False
+
+
+    def _send_dingtalk_chunked_old(self, url: str, content: str, max_bytes: int = 20000) -> bool:
         import time as _time
 
         # 为 payload 开销预留空间，避免 body 超限
