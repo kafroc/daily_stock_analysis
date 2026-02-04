@@ -2410,7 +2410,7 @@ class NotificationService:
         return timestamp, sign
 
 
-    def _send_dingtalk_chunked(self, url: str, content: str, max_bytes: int = 20000):
+    def _post_custom_webhook_new(self, url: str, content: str, timeout=30):
 
         """
         发送钉钉告警消息
@@ -2450,7 +2450,7 @@ class NotificationService:
             }
             
             headers = {'Content-Type': 'application/json'}
-            response = requests.post(url, headers=headers, data=json.dumps(data), timeout=10)
+            response = requests.post(url, headers=headers, data=json.dumps(data), timeout=timeout)
             
             result = response.json()
             if result.get('errcode') == 0:
@@ -2465,7 +2465,7 @@ class NotificationService:
             return False
 
 
-    def _send_dingtalk_chunked_old(self, url: str, content: str, max_bytes: int = 20000) -> bool:
+    def _send_dingtalk_chunked(self, url: str, content: str, max_bytes: int = 20000) -> bool:
         import time as _time
 
         # 为 payload 开销预留空间，避免 body 超限
@@ -2493,7 +2493,8 @@ class NotificationService:
                 hard_budget = max(200, budget - (body_bytes - max_bytes) - 200)
                 payload["markdown"]["text"] = self._truncate_to_bytes(payload["markdown"]["text"], hard_budget)
 
-            if self._post_custom_webhook(url, payload, timeout=30):
+            # if self._post_custom_webhook(url, payload, timeout=30):
+            if self._post_custom_webhook_new(url, json.dumps(payload, ensure_ascii=False).encode('utf-8'), timeout=30):
                 ok += 1
             else:
                 logger.error(f"钉钉分批发送失败: 第 {idx+1}/{total} 批")
