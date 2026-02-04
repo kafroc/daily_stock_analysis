@@ -2391,6 +2391,7 @@ class NotificationService:
         return [c for c in (c.strip() for c in chunks) if c]
 
     def generate_sign(self, secret):
+        import time
         """
         生成钉钉机器人签名
         
