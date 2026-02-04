@@ -2441,6 +2441,7 @@ class NotificationService:
                 url = url
             
             # 构造Markdown消息
+            '''
             data = {
                 "msgtype": "markdown",
                 "markdown": {
@@ -2448,9 +2449,9 @@ class NotificationService:
                     "text": content
                 }
             }
-            
+            '''
             headers = {'Content-Type': 'application/json'}
-            response = requests.post(url, headers=headers, data=json.dumps(data), timeout=timeout)
+            response = requests.post(url, headers=headers, data=content, timeout=timeout)
             
             result = response.json()
             if result.get('errcode') == 0:
